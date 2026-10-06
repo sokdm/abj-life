@@ -7,17 +7,19 @@ import User from "@/models/User";
 import { getPlayerForUser } from "@/services/playerService";
 import { getWorldState } from "@/services/worldService";
 import { getEconomyState } from "@/services/economyService";
+import { getPhase4State } from "@/services/phase4Service";
 
 export default async function DashboardPage() {
   const userId = await getSessionUserId();
   if (!userId) redirect("/login");
 
   await connectDb();
-  const [user, player, world, economyState] = await Promise.all([
+  const [user, player, world, economyState, phase4State] = await Promise.all([
     User.findById(userId).lean(),
     getPlayerForUser(userId),
     getWorldState(userId),
-    getEconomyState(userId)
+    getEconomyState(userId),
+    getPhase4State(userId)
   ]);
   if (!user || !player) redirect("/login");
   if (!player.character?.name) redirect("/character");
@@ -33,6 +35,7 @@ export default async function DashboardPage() {
             initialNotifications={JSON.parse(JSON.stringify(world.notifications))}
             initialTransactions={JSON.parse(JSON.stringify(world.transactions))}
             economyState={JSON.parse(JSON.stringify(economyState))}
+            phase4State={JSON.parse(JSON.stringify(phase4State))}
           />
         </div>
       </div>

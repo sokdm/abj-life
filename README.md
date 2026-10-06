@@ -22,6 +22,12 @@ A phase-one multiplayer-ready Nigerian life simulation game prototype built with
 - Notifications, direct-message and friendship foundations
 - MongoDB connection, Mongoose models and service layer
 - Admin action-log foundation
+- Phase 4 isometric tap-to-walk world renderer
+- Server-synced Africa/Lagos day/night lighting
+- Socket.IO movement and emote sync
+- Audio settings foundation
+- ABJ Social, Crews, Marketplace and Business foundations
+- PWA manifest and mobile safe-area support
 
 ## Setup
 
@@ -73,5 +79,15 @@ npm run seed:dev
 ```
 
 The current economy catalog is code-defined in `lib/economy.js`; the seed command does not overwrite production data.
+
+## Phase 4 Time Testing
+
+Production uses real Nigerian time. In local development only, you can test lighting phases with:
+
+```bash
+DEV_TIME_OVERRIDE=night
+```
+
+Allowed values: `dawn`, `morning`, `afternoon`, `evening`, `night`.
 
 Currency changes are handled by API routes and persisted server-side. Do not hardcode secrets or MongoDB credentials.

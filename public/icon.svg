@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <rect width="128" height="128" rx="24" fill="#080d14"/>
+  <rect x="18" y="18" width="92" height="92" rx="16" fill="#27d17f"/>
+  <text x="64" y="75" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" font-weight="900" fill="#080d14">ABJ</text>
+</svg>

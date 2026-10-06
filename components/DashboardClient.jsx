@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { io } from "socket.io-client";
 import { Banknote, Bell, BriefcaseBusiness, Clock, CloudSun, Home, Map, MessageCircle, Phone, Send, Users, Wallet, Wifi } from "lucide-react";
 import { districtCatalog, jobCatalog, lockedPhoneApps, phoneApps } from "@/lib/worldData";
+import { GameWorld } from "@/components/GameWorld";
 
 const naira = (value) => `N${Number(value || 0).toLocaleString()}`;
 
@@ -139,6 +140,8 @@ function PhonePanel({ player, setPlayer, notifications, transactions, economySta
   const [messageTo, setMessageTo] = useState("");
   const [message, setMessage] = useState("");
   const [friend, setFriend] = useState("");
+  const [socialPost, setSocialPost] = useState("");
+  const [crewName, setCrewName] = useState("");
   const [notice, setNotice] = useState("");
   const [confirm, setConfirm] = useState(null);
   const [localEconomy, setLocalEconomy] = useState(economyState);
@@ -176,6 +179,18 @@ function PhonePanel({ player, setPlayer, notifications, transactions, economySta
     const response = await fetch("/api/friends/request", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: friend }) });
     const data = await response.json();
     setNotice(response.ok ? "Friend request sent." : data.error);
+  }
+  async function postSocial() {
+    const response = await fetch("/api/social/posts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ body: socialPost }) });
+    const data = await response.json();
+    setNotice(response.ok ? "Posted to ABJ Social." : data.error);
+    if (response.ok) setSocialPost("");
+  }
+  async function createCrew() {
+    const response = await fetch("/api/crews/create", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: crewName }) });
+    const data = await response.json();
+    setNotice(response.ok ? "Crew created." : data.error);
+    if (response.ok) setCrewName("");
   }
   return (
     <div className="game-card rounded-[28px] border-4 border-black bg-black p-4 shadow-glow">
@@ -274,15 +289,31 @@ function PhonePanel({ player, setPlayer, notifications, transactions, economySta
             </div>
           </section>
         </div>
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          <section className="rounded-lg border border-white/10 bg-black/25 p-3">
+            <h3 className="font-black">ABJ Social</h3>
+            <textarea className="mt-3 h-20 w-full resize-none rounded bg-black/35 px-3 py-2" placeholder="Share an in-game update..." value={socialPost} onChange={(e) => setSocialPost(e.target.value)} />
+            <button onClick={postSocial} className="mt-2 rounded bg-abj-green px-3 py-2 font-black text-abj-night">Post</button>
+          </section>
+          <section className="rounded-lg border border-white/10 bg-black/25 p-3">
+            <h3 className="font-black">Crews</h3>
+            <input className="mt-3 w-full rounded bg-black/35 px-3 py-2" placeholder="Crew name" value={crewName} onChange={(e) => setCrewName(e.target.value)} />
+            <button onClick={createCrew} className="mt-2 rounded border border-abj-gold/40 px-3 py-2 font-black text-abj-gold">Create crew</button>
+          </section>
+        </div>
       </div>
     </div>
   );
 }
 
-export function DashboardClient({ initialPlayer, username, initialNotifications = [], initialTransactions = [], economyState }) {
+export function DashboardClient({ initialPlayer, username, initialNotifications = [], initialTransactions = [], economyState, phase4State }) {
   const [player, setPlayer] = useState(initialPlayer);
   const [tab, setTab] = useState("HOME");
-  const [clock, setClock] = useState(getClock());
+  const [clock, setClock] = useState({
+    time: phase4State?.serverTime?.display || "Nigeria time",
+    day: "Africa/Lagos",
+    phase: phase4State?.serverTime?.phase || "morning"
+  });
   const [socket, setSocket] = useState(null);
   const [roomPlayers, setRoomPlayers] = useState([]);
   const [messages, setMessages] = useState([]);
@@ -291,9 +322,23 @@ export function DashboardClient({ initialPlayer, username, initialNotifications 
   const currentDistrict = useMemo(() => districtCatalog.find((item) => item.id === player.currentDistrict), [player.currentDistrict]);
 
   useEffect(() => {
-    const timer = setInterval(() => setClock(getClock()), 2000);
+    const timer = setInterval(async () => {
+      try {
+        const response = await fetch("/api/phase4/time");
+        const data = await response.json();
+        if (data.ok) {
+          setClock({
+            time: data.serverTime.display,
+            day: data.serverTime.timezone,
+            phase: data.serverTime.phase
+          });
+        }
+      } catch {
+        setClock((current) => current);
+      }
+    }, 30000);
     return () => clearInterval(timer);
-  }, []);
+  }, [phase4State?.serverTime?.display, phase4State?.serverTime?.phase]);
 
   useEffect(() => {
     const client = io({ path: "/api/socket", auth: { username, avatar: player.character?.name?.slice(0, 2) || "ABJ" } });
@@ -310,7 +355,7 @@ export function DashboardClient({ initialPlayer, username, initialNotifications 
   const nav = [["HOME", Home], ["CITY", Map], ["ACTIVITIES", BriefcaseBusiness], ["PHONE", Phone]];
 
   return (
-    <div className={`space-y-4 pb-24 xl:pb-0 ${clock.phase === "Night" ? "brightness-90" : ""}`}>
+    <div className={`space-y-4 pb-24 xl:pb-0 ${clock.phase === "night" ? "brightness-90" : ""}`}>
       <header className="glass-panel sticky top-3 z-20 rounded-lg p-3">
         <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
           <div className="flex flex-wrap items-center gap-3 text-sm">
@@ -334,7 +379,7 @@ export function DashboardClient({ initialPlayer, username, initialNotifications 
 
       <main className="grid gap-4 xl:grid-cols-[1fr_340px]">
         <div className="space-y-4">
-          {tab === "HOME" && <ApartmentScene player={player} roomPlayers={roomPlayers.filter((item) => item.userId !== String(player.user))} onPhone={() => setTab("PHONE")} onPlayer={setSelectedPlayer} />}
+          {tab === "HOME" && <GameWorld player={player} username={username} socket={socket} phase4State={phase4State} roomPlayers={roomPlayers.filter((item) => item.userId !== String(player.user))} onOpenPhone={() => setTab("PHONE")} onSelectPlayer={setSelectedPlayer} />}
           {tab === "CITY" && <CityPanel player={player} setPlayer={setPlayer} />}
           {tab === "ACTIVITIES" && <ActivitiesPanel setPlayer={setPlayer} />}
           {tab === "PHONE" && <PhonePanel player={player} setPlayer={setPlayer} notifications={initialNotifications} transactions={initialTransactions} economyState={economyState} />}

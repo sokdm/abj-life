@@ -13,6 +13,7 @@ const handle = app.getRequestHandler();
 
 const presence = new Map();
 const blockedUntil = new Map();
+const movementState = new Map();
 
 function readCookie(cookieHeader, name) {
   return cookieHeader
@@ -164,6 +165,65 @@ app.prepare().then(() => {
       }
     });
 
+    socket.on("player:move", ({ locationId, start, destination, path, timestamp }) => {
+      const safeLocation = cleanText(locationId);
+      if (!safeLocation || socket.data.locationId !== safeLocation) return;
+      const now = Date.now();
+      const dx = Number(destination?.x) - Number(start?.x);
+      const dy = Number(destination?.y) - Number(start?.y);
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      const elapsed = Math.max(0.4, (now - Number(timestamp || now)) / 1000);
+      if (!Number.isFinite(distance) || distance / elapsed > 8 || distance > 18) {
+        socket.emit("system:notice", { message: "Movement rejected." });
+        return;
+      }
+      const movement = {
+        userId: socket.data.userId,
+        username: socket.data.username,
+        avatar: socket.data.avatar,
+        locationId: safeLocation,
+        start,
+        destination,
+        path: Array.isArray(path) ? path.slice(0, 40) : [],
+        timestamp: now
+      };
+      movementState.set(socket.data.userId, movement);
+      socket.to(`location:${safeLocation}`).emit("player:moved", movement);
+    });
+
+    socket.on("player:emote", ({ locationId, emote }) => {
+      const safeLocation = cleanText(locationId);
+      const safeEmote = cleanText(emote, 24);
+      const now = Date.now();
+      const limitKey = `${socket.data.userId}:emote`;
+      if ((blockedUntil.get(limitKey) || 0) > now) return;
+      blockedUntil.set(limitKey, now + 1800);
+      if (!safeLocation || socket.data.locationId !== safeLocation || !safeEmote) return;
+      io.to(`location:${safeLocation}`).emit("player:emote", {
+        userId: socket.data.userId,
+        username: socket.data.username,
+        emote: safeEmote,
+        createdAt: new Date().toISOString()
+      });
+    });
+
+    socket.on("crew:join", ({ crewId }) => {
+      const safeCrew = cleanText(crewId);
+      if (safeCrew) socket.join(`crew:${safeCrew}`);
+    });
+
+    socket.on("crew:message", ({ crewId, message }) => {
+      const safeCrew = cleanText(crewId);
+      const safeMessage = cleanText(message);
+      if (!safeCrew || !safeMessage) return;
+      io.to(`crew:${safeCrew}`).emit("crew:message", {
+        userId: socket.data.userId,
+        username: socket.data.username,
+        message: safeMessage,
+        createdAt: new Date().toISOString()
+      });
+    });
+
     socket.on("direct:send", ({ toUserId, message }) => {
       const safeMessage = cleanText(message);
       const safeTo = cleanText(toUserId);
@@ -183,6 +243,7 @@ app.prepare().then(() => {
     socket.on("disconnect", () => {
       const previous = socket.data.locationId;
       presence.delete(socket.data.userId);
+      movementState.delete(socket.data.userId);
       if (previous) {
         io.to(`location:${previous}`).emit("location:players", Array.from(presence.values()).filter((player) => player.locationId === previous));
       }

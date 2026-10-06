@@ -1,0 +1,17 @@
+{
+  "name": "ABJ Life Style",
+  "short_name": "ABJ Life",
+  "description": "Live your Abuja story.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#080d14",
+  "theme_color": "#27d17f",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
