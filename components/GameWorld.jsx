@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { emotes, qualityDefaults, walkableLayouts } from "@/lib/phase4Data";
+import { emotes, objectActivities, qualityDefaults, walkableLayouts } from "@/lib/phase4Data";
 import { findPath, isoToScreen } from "@/lib/pathfinding";
 import { timePhases } from "@/lib/time";
 import { AudioManager } from "@/lib/audioManager";
@@ -47,6 +47,7 @@ export function GameWorld({ player, username, socket, phase4State, roomPlayers, 
   const [path, setPath] = useState([]);
   const [remoteActors, setRemoteActors] = useState({});
   const [selectedObject, setSelectedObject] = useState(null);
+  const [activity, setActivity] = useState(null);
   const [settings, setSettings] = useState(qualityDefaults);
   const [audioSettings, setAudioSettings] = useState(audio.load());
   const [unlocked, setUnlocked] = useState(false);
@@ -147,6 +148,30 @@ export function GameWorld({ player, username, socket, phase4State, roomPlayers, 
     setAudioSettings(audio.save(next));
   }
 
+  async function startActivity(item) {
+    const response = await fetch("/api/activities/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ activityId: item.action, sourceId: selectedObject.id, duration: item.duration })
+    });
+    const data = await response.json();
+    if (response.ok) {
+      setActivity({ ...item, remaining: item.duration });
+      audio.beep("success");
+    } else {
+      setActivity({ action: data.error || "Unable to start", duration: 0, remaining: 0, effects: "" });
+      audio.beep("error");
+    }
+  }
+
+  useEffect(() => {
+    if (!activity?.remaining) return;
+    const timer = setInterval(() => {
+      setActivity((current) => current ? { ...current, remaining: Math.max(0, current.remaining - 1) } : current);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [activity?.remaining]);
+
   const remoteList = [
     ...roomPlayers.map((item, index) => ({
       userId: item.userId,
@@ -222,12 +247,18 @@ export function GameWorld({ player, username, socket, phase4State, roomPlayers, 
         </div>
 
         {selectedObject && (
-          <div className="absolute right-4 top-4 w-56 rounded-lg border border-white/10 bg-black/70 p-4">
-            <h3 className="font-black">{selectedObject.label}</h3>
+          <div className="absolute bottom-4 left-4 right-4 z-30 rounded-[26px] border border-slate-200 bg-white/95 p-4 shadow-2xl md:left-auto md:top-4 md:bottom-auto md:w-72">
+            <h3 className="font-black text-slate-900">{selectedObject.label}</h3>
             <div className="mt-3 grid gap-2">
-              {selectedObject.actions.map((action) => <button key={action} className="rounded border border-white/10 px-3 py-2 text-sm font-bold">{action}</button>)}
+              {(objectActivities[selectedObject.id] || selectedObject.actions.map((action) => ({ action, duration: 6, effects: "" }))).map((item) => (
+                <button key={item.action} onClick={() => startActivity(item)} className="flex justify-between rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700">
+                  <span>{item.action}</span>
+                  <span className="text-emerald-600">{item.duration}s {item.effects}</span>
+                </button>
+              ))}
             </div>
-            <button onClick={() => setSelectedObject(null)} className="mt-3 text-xs text-white/50">Close</button>
+            {activity && <p className="mt-3 rounded-2xl bg-emerald-50 px-3 py-2 text-sm font-black text-emerald-700">{activity.action}: {activity.remaining}s</p>}
+            <button onClick={() => setSelectedObject(null)} className="mt-3 text-xs font-bold text-slate-500">Close</button>
           </div>
         )}
       </div>

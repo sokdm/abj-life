@@ -3,7 +3,11 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
+  --abj-ink: #132238;
+  --abj-muted: #64748b;
+  --abj-card: rgba(255, 255, 255, 0.92);
+  --abj-border: rgba(15, 23, 42, 0.1);
 }
 
 * {
@@ -13,10 +17,10 @@
 body {
   margin: 0;
   background:
-    radial-gradient(circle at top left, rgba(39, 209, 127, 0.18), transparent 34rem),
-    radial-gradient(circle at top right, rgba(84, 197, 255, 0.14), transparent 32rem),
-    #080d14;
-  color: #ecf7f1;
+    radial-gradient(circle at top left, rgba(84, 197, 255, 0.2), transparent 32rem),
+    radial-gradient(circle at top right, rgba(39, 209, 127, 0.16), transparent 32rem),
+    linear-gradient(180deg, #dff5ff 0%, #f8fbff 48%, #fff7e8 100%);
+  color: var(--abj-ink);
   min-height: 100vh;
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
@@ -39,19 +43,34 @@ select {
 
 .city-grid {
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.055) 1px, transparent 1px);
+    linear-gradient(rgba(19, 34, 56, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(19, 34, 56, 0.055) 1px, transparent 1px);
   background-size: 44px 44px;
 }
 
 .glass-panel {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(16, 25, 37, 0.78);
+  border: 1px solid var(--abj-border);
+  background: rgba(255, 255, 255, 0.86);
   backdrop-filter: blur(18px);
+  box-shadow: 0 12px 36px rgba(30, 64, 120, 0.12);
 }
 
 .game-card {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: linear-gradient(145deg, rgba(21, 34, 51, 0.94), rgba(11, 17, 27, 0.92));
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+  border: 1px solid var(--abj-border);
+  background: var(--abj-card);
+  box-shadow: 0 18px 45px rgba(30, 64, 120, 0.14);
+  color: var(--abj-ink);
+}
+
+.soft-button {
+  border: 1px solid var(--abj-border);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--abj-ink);
+  box-shadow: 0 8px 20px rgba(30, 64, 120, 0.08);
+}
+
+.bottom-sheet {
+  border-top: 1px solid var(--abj-border);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 -20px 60px rgba(30, 64, 120, 0.18);
 }
